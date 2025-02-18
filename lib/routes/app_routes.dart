@@ -109,22 +109,22 @@ class AppRoutes {
           name: '/info',
           page: () => ModifyInfoPage(),
         ),
-//        GetPage(
-//          name: '/payments',
-//          page: () => PaymentPage(),
-//          children: [
-//            // 결제 성공 화면
-//            GetPage(
-//              name: '/success',
-//              page: () => PaymentSuccessPage(),
-//            ),
-        // 결제 실패 화면
-//            GetPage(
-//              name: '/fail',
-//              page: () => PaymentFailPage(),
-//            ),
-//          ],
-//        ),
+        GetPage(
+          name: '/payments',
+          page: () => PaymentPage(),
+          children: [
+            // 결제 성공 화면
+            GetPage(
+              name: '/success',
+              page: () => PaymentSuccessPage(),
+            ),
+            // 결제 실패 화면
+            GetPage(
+              name: '/fail',
+              page: () => PaymentFailPage(),
+            ),
+          ],
+        ),
       ],
     ),
   ];
