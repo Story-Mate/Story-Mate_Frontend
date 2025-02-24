@@ -72,7 +72,19 @@ class BookReadController extends GetxController {
   // 뒤로 가기 (책 읽기 중단 시 진행도 저장)
   void goBack(int bookId) async {
     await updateReadingProgress(bookId); // 진행도 저장 후 종료
+    resetBookData(); // 상태 초기화
     Get.back();
+  }
+
+  // 책 데이터를 초기화하는 메서드
+  void resetBookData() {
+    pages.clear(); // 페이지 목록 비우기
+    currentPage.value = 0; // 현재 페이지 초기화
+    progress.value = 0.0; // 진행률 초기화
+    bookmarks.clear(); // 북마크 초기화
+    bookmarkIds.clear(); // 북마크 ID 초기화
+    highlightsPerPage.clear(); // 하이라이트 초기화
+    print("[DEBUG] 책 데이터 초기화 완료: 새 파일 데이터를 읽을 준비 완료");
   }
 
   /// 특정 책의 하이라이트 목록 불러오기 (API 연동)
@@ -232,6 +244,11 @@ class BookReadController extends GetxController {
   // 책 파일 로드 (초기 데이터 로드 포함)
   Future<void> loadBook(String filePath, double screenWidth,
       double screenHeight, TextStyle textStyle, int bookId) async {
+    if (pages.isNotEmpty) {
+      print("[DEBUG] 파일이 이미 로드되어 있습니다. 재로드를 방지합니다.");
+      return; // 이미 로드된 경우 재로드 방지
+    }
+
     try {
       final String rawContent = await rootBundle.loadString(filePath);
       final String processedContent = preprocessText(rawContent); // 전처리 추가
@@ -241,6 +258,10 @@ class BookReadController extends GetxController {
 
       // 초기 데이터 로드 (북마크 & 하이라이트)
       await initializeBookData(bookId);
+
+      // 파일 로드 후 진행도 업데이트
+      await updateReadingProgress(bookId);
+      print("[DEBUG] 파일 로드 및 진행도 업데이트 완료");
     } catch (e) {
       Get.snackbar('Error', '파일을 읽는 데 실패했습니다: $e');
     }

@@ -130,12 +130,26 @@ class _RecommendCardItemState extends State<RecommendCardItem> {
                   Padding(
                     padding: EdgeInsets.only(left: 10.w),
                     child: GestureDetector(
-                      onTap: () {
+                      onTap: () async {
                         if (widget.isCharacter) {
-                          if (widget.characterId != null) {
-                            controller.createChatRoom(
-                                widget.book.characterName!,
-                                widget.characterId!);
+                          if (widget.characterId != 0) {
+                            bool isChatRoomCreated =
+                                await controller.createChatRoom(
+                              widget.book.characterName!,
+                              widget.characterId!,
+                              widget.book.title!,
+                            );
+
+                            if (!isChatRoomCreated) {
+                              // 채팅방 생성 실패 시 안내창 띄우기
+                              Get.snackbar(
+                                "알림",
+                                "아직 대화 기능이 개설되지 않은 캐릭터입니다.",
+                                snackPosition: SnackPosition.BOTTOM,
+                                backgroundColor: Colors.redAccent,
+                                colorText: Colors.white,
+                              );
+                            }
                           } else {
                             Get.snackbar(
                               "알림",
@@ -183,7 +197,7 @@ class _RecommendCardItemState extends State<RecommendCardItem> {
                         ),
                       ),
                     ),
-                  ),
+                  )
                 ],
               ),
             ),

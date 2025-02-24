@@ -17,7 +17,8 @@ class BookReadPage extends StatefulWidget {
 }
 
 class _BookReadPageState extends State<BookReadPage> {
-  final BookReadController controller = Get.put(BookReadController());
+  // final BookReadController controller = Get.put(BookReadController());
+  final BookReadController controller = Get.find<BookReadController>();
 
   int? startSelection;
   int? endSelection;

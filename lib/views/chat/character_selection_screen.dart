@@ -2,12 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:storymate/views/chat/chat_room_list.dart';
-import 'package:web_socket_channel/web_socket_channel.dart'; // 추가된 부분
+import 'package:storymate/components/theme.dart';
+import 'package:storymate/services/api_service.dart';
 import '../../../components/custom_bottom_bar.dart';
 import '../../../routes/app_routes.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+
+// RouteObserver를 사용하기 위한 글로벌 선언
+final RouteObserver<PageRoute> routeObserver = RouteObserver<PageRoute>();
 
 class CharacterSelectionScreen extends StatefulWidget {
   const CharacterSelectionScreen({super.key});
@@ -17,8 +20,11 @@ class CharacterSelectionScreen extends StatefulWidget {
       _CharacterSelectionScreenState();
 }
 
-class _CharacterSelectionScreenState extends State<CharacterSelectionScreen> {
+class _CharacterSelectionScreenState extends State<CharacterSelectionScreen>
+    with RouteAware {
   final TextEditingController searchController = TextEditingController();
+  final _apiService = ApiService();
+  var messageCount = 0.obs;
 
   // 기존 하드코딩된 캐릭터 데이터 유지
   final List<Map<String, dynamic>> localCharacters = [
@@ -102,6 +108,29 @@ class _CharacterSelectionScreenState extends State<CharacterSelectionScreen> {
   void initState() {
     super.initState();
     filteredCharacters = List.from(localCharacters);
+    fetchUserInfo();
+  }
+
+  // RouteObserver 구독 및 해제
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final ModalRoute? route = ModalRoute.of(context);
+    if (route is PageRoute) {
+      routeObserver.subscribe(this, route);
+    }
+  }
+
+  @override
+  void dispose() {
+    routeObserver.unsubscribe(this);
+    super.dispose();
+  }
+
+  // 화면이 다시 활성화될 때 호출
+  @override
+  void didPopNext() {
+    fetchUserInfo(); // 사용자가 다른 화면에서 돌아왔을 때 메시지 카운트 업데이트
   }
 
   // 검색 기능 추가
@@ -208,11 +237,29 @@ class _CharacterSelectionScreenState extends State<CharacterSelectionScreen> {
     return prefs.getString('accessToken'); // accessToken 가져오기
   }
 
+  /// 회원 정보 조회 API 호출
+  Future<void> fetchUserInfo() async {
+    try {
+      final userData = await _apiService.fetchUserInfo();
+
+      if (userData != null) {
+        messageCount.value = userData["messageCount"] ?? 0;
+
+        print("회원 정보 조회 성공: 메시지 개수=${messageCount.value}");
+      } else {
+        print("회원 정보 조회 실패");
+      }
+    } catch (e) {
+      print("회원 정보 조회 중 오류 발생: $e");
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
+        forceMaterialTransparency: true,
         backgroundColor: Colors.purple[50],
         elevation: 0,
         title: Text(
@@ -224,6 +271,40 @@ class _CharacterSelectionScreenState extends State<CharacterSelectionScreen> {
             fontWeight: FontWeight.bold,
           ),
         ),
+        actions: [
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: 15.w),
+            child: Container(
+              decoration: BoxDecoration(
+                color: AppTheme.primaryColor,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 5.h),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.chat_bubble_outline,
+                    color: Colors.white,
+                    size: 20.w,
+                  ),
+                  SizedBox(
+                    width: 5.w,
+                  ),
+                  Obx(
+                    () => Text(
+                      '${messageCount.value}',
+                      style: TextStyle(
+                        fontFamily: 'Jua',
+                        fontSize: 15.sp,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
       body: Column(
         children: [

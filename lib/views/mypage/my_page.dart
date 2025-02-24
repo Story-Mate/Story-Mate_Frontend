@@ -9,6 +9,8 @@ import 'package:storymate/components/theme.dart';
 import 'package:storymate/services/api_service.dart';
 import 'package:storymate/view_models/mypage/my_controller.dart';
 
+final RouteObserver<PageRoute> routeObserver = RouteObserver<PageRoute>();
+
 class MyPage extends StatefulWidget {
   const MyPage({super.key});
 
@@ -16,8 +18,31 @@ class MyPage extends StatefulWidget {
   State<MyPage> createState() => _MyPageState();
 }
 
-class _MyPageState extends State<MyPage> {
+class _MyPageState extends State<MyPage> with RouteAware {
   final MyController controller = Get.put(MyController());
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final ModalRoute? route = ModalRoute.of(context);
+    if (route is PageRoute) {
+      routeObserver.subscribe(this, route);
+    }
+  }
+
+  @override
+  void dispose() {
+    routeObserver.unsubscribe(this);
+    super.dispose();
+  }
+
+  // 화면에 다시 진입했을 때 데이터 새로고침
+  @override
+  void didPopNext() {
+    controller.fetchUserInfo(); // 데이터 새로고침
+    controller.fetchReadingBooks();
+    controller.fetchFinishedBooks();
+  }
 
   // 샘플 데이터
   final List<Map<String, String>> items = [

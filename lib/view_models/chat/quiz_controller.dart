@@ -22,9 +22,13 @@ class QuizController extends GetxController {
   var question = "".obs; // Rx 변수로 변경
   var quizType = "".obs; // Rx 변수로 변경
 
-  int oxAnswer = -1;
-  int mcqAnswer = -1;
-  TextEditingController essayController = TextEditingController();
+  var essayControllers =
+      <int, TextEditingController>{}.obs; // 각 에세이 퀴즈별 컨트롤러 저장
+
+  var oxAnswers = <int, int>{}.obs; // OX 퀴즈 답변 저장 (index, 답변값)
+  var mcqAnswers = <int, int>{}.obs; // 객관식 답변 저장 (index, 답변 인덱스)
+  var essayAnswers = <int, String>{}.obs; // 에세이 답변 저장 (index, 텍스트)
+  var essayResponses = <int, String>{}.obs; // 에세이 서버 응답 저장
 
   @override
   void onInit() {
@@ -65,10 +69,6 @@ class QuizController extends GetxController {
 
     print("전체 퀴즈 데이터 목록: $quizList");
 
-    if (quizList.isNotEmpty) {
-      updateCurrentQuiz();
-    }
-
     isLoading.value = false;
   }
 
@@ -86,93 +86,155 @@ class QuizController extends GetxController {
     return options;
   }
 
-  // 현재 퀴즈 설정
-  void updateCurrentQuiz() {
-    if (quizList.isNotEmpty && currentQuizIndex.value < quizList.length) {
-      var currentQuiz = quizList[currentQuizIndex.value];
-      question.value = currentQuiz["question"];
-      quizType.value = currentQuiz["type"];
+  bool isAnswerProvided(int index) {
+    String quizType = quizList[index]["type"];
 
-      print(
-          "현재 문제 설정 완료: 인덱스 = ${currentQuizIndex.value}, 문제 = $question, 유형 = $quizType");
-
-      oxAnswer = -1;
-      mcqAnswer = -1;
-      essayController.clear();
-    } else {
-      print(
-          "문제를 불러오는 데 실패했습니다. 인덱스: ${currentQuizIndex.value}, 전체 퀴즈 수: ${quizList.length}");
-    }
-  }
-
-  bool get isAnswerProvided {
-    if (quizType.value == "ox") {
-      return oxAnswer != -1;
-    } else if (quizType.value == "multiple_choice") {
-      return mcqAnswer != -1;
-    } else if (quizType.value == "essay") {
-      return essayAnswer.value.trim().isNotEmpty; // 에세이 입력 감지
+    if (quizType == "ox") {
+      return oxAnswers.containsKey(index) && oxAnswers[index] != -1;
+    } else if (quizType == "multiple_choice") {
+      return mcqAnswers.containsKey(index) && mcqAnswers[index] != -1;
+    } else if (quizType == "essay") {
+      return essayAnswers.containsKey(index) &&
+          essayAnswers[index]!.trim().isNotEmpty;
     }
     return false;
   }
 
   // 퀴즈 제출 및 결과 확인
-  Future<void> submitQuiz(BuildContext context) async {
+  Future<void> submitQuiz(BuildContext context, index) async {
     if (isSubmitting.value) return;
 
     isSubmitting.value = true;
 
+    String quizType = quizList[index]["type"];
     String userAnswer = "";
+
     if (quizType == "ox") {
-      userAnswer = oxAnswer == 1 ? "O" : "X";
+      int? answer = oxAnswers[index];
+      userAnswer = answer == 1 ? "O" : "X";
     } else if (quizType == "multiple_choice") {
-      userAnswer = (mcqAnswer + 1).toString();
-    } else {
-      userAnswer = essayController.text;
-      isEssaySubmitting.value = true;
+      int? answer = mcqAnswers[index];
+      userAnswer = (answer! + 1).toString(); // 선택한 객관식 인덱스 + 1
+    } else if (quizType == "essay") {
+      userAnswer = essayAnswers[index] ?? "";
     }
 
-    // 서버로 답안 제출 (GET 요청 유지)
-    var response = await apiService.submitQuizAnswer(
-        characterName, bookTitle, quizType.value, userAnswer);
+    try {
+      // 서버로 답안 제출 (GET 요청 유지)
+      var response = await apiService.submitQuizAnswer(
+          characterName, bookTitle, quizType, userAnswer);
 
-    if (response != null) {
-      print("서버 응답 전체 데이터: $response");
+      if (response != null && response["statusCode"] == 200) {
+        print("서버 응답 전체 데이터: $response");
 
-      String resultMessage =
-          response["data"]["response"]?.toString() ?? "응답 데이터가 없습니다.";
+        String resultMessage =
+            response["data"]["response"]?.toString() ?? "응답 데이터가 없습니다.";
+        String essayResult = "";
+        String correctStatus = response["data"]["correct"]?.toString() ?? "";
 
-      if (quizType.value == "essay") {
-        essayResponse.value = resultMessage;
-        isEssaySubmitting.value = false;
+        // 메세지 개수 증가 안내 메시지 추가
+        String messageIncrement = "";
+        if (quizType == "ox" && correctStatus == "true") {
+          messageIncrement = "메세지 개수가 1개 추가되었습니다!";
+        } else if (quizType == "multiple_choice" && correctStatus == "true") {
+          messageIncrement = "메세지 개수가 2개 추가되었습니다!";
+        } else if (quizType == "essay") {
+          if (correctStatus == "O") {
+            essayResult = "정답입니다!";
+            messageIncrement = "메세지 개수가 3개 추가되었습니다!";
+          } else if (correctStatus == "C") {
+            essayResult = "거의 맞췄어요! 좀 더 생각해보세요.";
+            messageIncrement = "메세지 개수가 1개 추가되었습니다!";
+          } else {
+            essayResult = "오답입니다. 다시 생각해보세요.";
+          }
+        }
+
+        if (quizType == "essay") {
+          // 다이얼로그에 결과 및 메세지 증가 안내 표시
+          showResultDialog(context, "$essayResult\n$messageIncrement");
+
+          // essayResponse.value = resultMessage;
+          essayResponses[index] = resultMessage;
+          isEssaySubmitting.value = false;
+
+          // 제출 후 입력 필드 초기화
+          essayControllers[index]?.clear();
+        } else {
+          showResultDialog(context, "$resultMessage\n$messageIncrement");
+        }
       } else {
-        showResultDialog(context, resultMessage);
+        print("퀴즈 제출 실패");
+        // 서버 응답이 실패했을 경우
+        showErrorDialog(context, "서버 오류가 발생했습니다. 다시 시도해주세요.");
       }
-    } else {
-      print("퀴즈 제출 실패");
+    } catch (e) {
+      // 네트워크 오류나 예외 발생 시
+      print("퀴즈 제출 중 오류 발생: $e");
+      showErrorDialog(context, "서버 연결 중 오류가 발생했습니다. 네트워크 상태를 확인하세요.");
     }
 
     isSubmitting.value = false;
   }
 
-  // 다음 퀴즈로 이동
-  void moveToNextQuiz(BuildContext context) {
-    if (currentQuizIndex.value < quizList.length - 1) {
-      currentQuizIndex.value++;
-      print("다음 퀴즈로 이동: 현재 인덱스 = ${currentQuizIndex.value}");
-      updateCurrentQuiz();
-    } else {
-      print("모든 퀴즈 완료: 전체 퀴즈 수 = ${quizList.length}");
-      Get.defaultDialog(
-        title: "퀴즈 완료!",
-        middleText: "모든 퀴즈를 완료했습니다!",
-        textConfirm: "종료",
-        onConfirm: () {
-          Get.back(); // 다이얼로그 닫기
-          Get.back(); // 이전 화면으로 돌아가기
-        },
-      );
-    }
+  // 서버 오류 다이얼로그
+  void showErrorDialog(BuildContext context, String message) {
+    Get.dialog(
+      Dialog(
+        backgroundColor: AppTheme.backgroundColor, // 다이얼로그 배경색
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20), // 둥근 모서리 설정
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min, // 내용만큼만 크기 설정
+            mainAxisAlignment: MainAxisAlignment.spaceAround, // 요소 간 공간 배분
+            children: [
+              // 오류 메시지 출력
+              Text(
+                "오류 발생",
+                style: TextStyle(
+                  fontFamily: 'Jua',
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.red, // 오류 메시지 색상
+                ),
+                textAlign: TextAlign.center,
+              ),
+              SizedBox(height: 10.h),
+              Text(
+                message,
+                style: TextStyle(
+                  fontFamily: 'Jua',
+                  fontSize: 18,
+                  color: Colors.black,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              SizedBox(height: 20.h),
+              // 확인 버튼
+              ElevatedButton(
+                onPressed: () {
+                  Get.back(); // 다이얼로그 닫기
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primaryColor, // 버튼 색상 설정
+                ),
+                child: Text(
+                  "확인",
+                  style: TextStyle(
+                    fontFamily: 'Jua',
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   // 결과 다이얼로그
@@ -207,13 +269,13 @@ class QuizController extends GetxController {
               ElevatedButton(
                 onPressed: () {
                   Get.back(); // 다이얼로그 닫기
-                  moveToNextQuiz(context); // 콜백 실행
+                  // moveToNextQuiz(context); // 콜백 실행
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppTheme.primaryColor, // 버튼 색상 설정
                 ),
                 child: Text(
-                  "다음 문제로",
+                  "확인",
                   style: TextStyle(
                     fontFamily: 'Jua',
                     color: Colors.white,

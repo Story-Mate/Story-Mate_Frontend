@@ -31,27 +31,75 @@ class HomeController extends GetxController {
       {
         "id": 1,
         "name": "김첨지",
-        "book": "운수 좋은 날",
-        "image": "assets/kim_cheomji.png"
+        "book": "운수좋은날",
+        "image": "assets/characters/ch.1-1.png"
       },
-      {"id": 2, "name": "인어공주", "book": "인어공주", "image": "assets/mermaid.png"},
+      {
+        "id": 2,
+        "name": "인어공주",
+        "book": "인어공주",
+        "image": "assets/characters/ch.2-1.png"
+      },
       {
         "id": 3,
-        "name": "성냥팔이 소녀",
-        "book": "성냥팔이 소녀",
-        "image": "assets/TheLittleGirl.png"
+        "name": "성냥팔이소녀",
+        "book": "성냥팔이소녀",
+        "image": "assets/characters/ch.3-1.png"
       },
-      {"name": "심청이", "book": "심봉사", "image": "assets/SimCheong.png"},
-      {"name": "엄지공주", "book": "엄지공주", "image": "assets/mermaid2.png"},
-      {"name": "윤이", "book": "동백꽃", "image": "assets/Dongbaekkkot.png"},
-      {"name": "시골쥐", "book": "시골 쥐 서울 구경", "image": "assets/mouse.png"},
-      {"name": "미운 아기 오리", "book": "미운 아기 오리", "image": "assets/duck.png"},
       {
-        "name": "허생원",
-        "book": "메밀꽃 필 무렵",
-        "image": "assets/theBuckwheatFlower.png"
+        "id": 4,
+        "name": "심청",
+        "book": "심봉사",
+        "image": "assets/characters/ch.4-1.png"
       },
-      {"name": "화자", "book": "날개", "image": "assets/me.png"},
+      {
+        "id": 5,
+        "name": "심봉사",
+        "book": "심봉사",
+        "image": "assets/characters/ch.5-1.png"
+      },
+      {
+        "id": 6,
+        "name": "엄지공주",
+        "book": "엄지공주",
+        "image": "assets/characters/ch.6-1.png"
+      },
+      {
+        "id": 7,
+        "name": "점순이",
+        "book": "동백꽃",
+        "image": "assets/characters/ch.7-1.png"
+      },
+      {
+        "id": 8,
+        "name": "화자",
+        "book": "동백꽃",
+        "image": "assets/characters/ch.8-1.png"
+      },
+      {
+        "id": 9,
+        "name": "시골쥐",
+        "book": "시골쥐서울구경",
+        "image": "assets/characters/ch.9-1.png"
+      },
+      {
+        "id": 10,
+        "name": "미운아기오리",
+        "book": "미운아기오리",
+        "image": "assets/characters/ch.10-1.png"
+      },
+      {
+        "id": 11,
+        "name": "허생원",
+        "book": "메밀꽃필무렵",
+        "image": "assets/characters/ch.11-1.png"
+      },
+      {
+        "id": 12,
+        "name": "화자",
+        "book": "날개",
+        "image": "assets/characters/ch.12-1.png"
+      },
     ];
 
     books.assignAll([
@@ -73,6 +121,9 @@ class HomeController extends GetxController {
         characterDescription: _getCharacterInfo(
                 "시골 쥐 서울 구경", localCharacters)["characterDescription"] ??
             "",
+        characterId:
+            _getCharacterInfo("시골 쥐 서울 구경", localCharacters)["characterId"] ??
+                0,
       ),
       Book(
         bookId: 8,
@@ -92,6 +143,8 @@ class HomeController extends GetxController {
         characterDescription: _getCharacterInfo(
                 "미운 아기 오리", localCharacters)["characterDescription"] ??
             "",
+        characterId:
+            _getCharacterInfo("미운 아기 오리", localCharacters)["characterId"] ?? 0,
       ),
       Book(
         bookId: 3,
@@ -111,7 +164,8 @@ class HomeController extends GetxController {
         characterDescription: _getCharacterInfo(
                 "성냥팔이 소녀", localCharacters)["characterDescription"] ??
             "",
-        characterId: 3,
+        characterId:
+            _getCharacterInfo("성냥팔이 소녀", localCharacters)["characterId"] ?? 0,
       ),
       Book(
         bookId: 5,
@@ -130,6 +184,8 @@ class HomeController extends GetxController {
         characterDescription: _getCharacterInfo(
                 "엄지공주", localCharacters)["characterDescription"] ??
             "",
+        characterId:
+            _getCharacterInfo("엄지공주", localCharacters)["characterId"] ?? 0,
       ),
       Book(
         bookId: 2,
@@ -148,7 +204,8 @@ class HomeController extends GetxController {
         characterDescription: _getCharacterInfo(
                 "인어공주", localCharacters)["characterDescription"] ??
             "",
-        characterId: 2,
+        characterId:
+            _getCharacterInfo("인어공주", localCharacters)["characterId"] ?? 0,
       ),
       Book(
         bookId: 1,
@@ -168,7 +225,8 @@ class HomeController extends GetxController {
         characterDescription: _getCharacterInfo(
                 "운수 좋은 날", localCharacters)["characterDescription"] ??
             "",
-        characterId: 1,
+        characterId:
+            _getCharacterInfo("운수 좋은 날", localCharacters)["characterId"] ?? 0,
       ),
       Book(
         bookId: 4,
@@ -185,6 +243,8 @@ class HomeController extends GetxController {
         characterDescription:
             _getCharacterInfo("심봉사", localCharacters)["characterDescription"] ??
                 "",
+        characterId:
+            _getCharacterInfo("심봉사", localCharacters)["characterId"] ?? 0,
       ),
       Book(
         bookId: 6,
@@ -203,6 +263,8 @@ class HomeController extends GetxController {
         characterDescription:
             _getCharacterInfo("동백꽃", localCharacters)["characterDescription"] ??
                 "",
+        characterId:
+            _getCharacterInfo("동백꽃", localCharacters)["characterId"] ?? 0,
       ),
       Book(
         bookId: 9,
@@ -222,6 +284,8 @@ class HomeController extends GetxController {
         characterDescription: _getCharacterInfo(
                 "메밀꽃 필 무렵", localCharacters)["characterDescription"] ??
             "",
+        characterId:
+            _getCharacterInfo("메밀꽃 필 무렵", localCharacters)["characterId"] ?? 0,
       ),
       Book(
         bookId: 10,
@@ -241,19 +305,34 @@ class HomeController extends GetxController {
         characterDescription:
             _getCharacterInfo("날개", localCharacters)["characterDescription"] ??
                 "",
+        characterId:
+            _getCharacterInfo("날개", localCharacters)["characterId"] ?? 0,
       ),
     ]);
   }
 
-  // 특정 책 제목과 일치하는 캐릭터 정보를 자동 매핑하는 함수
-  Map<String, String> _getCharacterInfo(
+  // 특정 책 제목과 일치하는 캐릭터 정보를 자동 매핑하는 함수 (공백 무시)
+  Map<String, dynamic> _getCharacterInfo(
       String bookTitle, List<Map<String, dynamic>> characters) {
+    // 책 제목에서 공백 제거하고 소문자로 변환
+    final normalizedBookTitle =
+        bookTitle.replaceAll(RegExp(r'\s+'), '').toLowerCase();
+
     final character = characters.firstWhere(
-      (char) => char["book"] == bookTitle,
-      orElse: () => {"name": "", "image": "assets/characters/default.png"},
+      (char) {
+        final normalizedCharBook =
+            (char["book"] ?? "").replaceAll(RegExp(r'\s+'), '').toLowerCase();
+        return normalizedCharBook == normalizedBookTitle;
+      },
+      orElse: () =>
+          {"id": 0, "name": "", "image": "assets/characters/default.png"},
     );
 
     return {
+      // characterId를 int로 반환, 변환 실패 시 기본값 0
+      "characterId": character["id"] is int
+          ? character["id"]
+          : int.tryParse(character["id"]?.toString() ?? "0") ?? 0,
       "characterName": character["name"] ?? "",
       "characterImage": character["image"] ?? "assets/characters/default.png",
       "characterDescription": character["name"] != ""
@@ -366,57 +445,80 @@ class HomeController extends GetxController {
   }
 
   // 채팅방 생성 (POST /api/chat-rooms)
-  Future<void> createChatRoom(String title, int characterId) async {
-    print("채팅방 생성 요청: title=$title, characterId=$characterId");
+  Future<bool> createChatRoom(
+      String title, int characterId, String bookTitle) async {
+    print(
+        "채팅방 생성 요청: title=$title, characterId=$characterId, bookTitle=$bookTitle");
 
     // 토큰 가져오기
     final token = await getToken();
     if (token == null) {
       print("토큰이 없습니다. 로그인 후 다시 시도해주세요.");
-      return;
+      return false;
     }
 
-    final response = await http.post(
-      Uri.parse('https://be.dev.storymate.site/api/chat-rooms'),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-      body: json.encode({
-        'title': title,
-        'charactersId': characterId,
-      }),
-    );
+    try {
+      final response = await http.post(
+        Uri.parse('https://be.dev.storymate.site/api/chat-rooms'),
+        headers: {
+          'Content-Type': 'application/json; charset=utf-8',
+          'Authorization': 'Bearer $token',
+        },
+        body: json.encode({
+          'title': title,
+          'charactersId': characterId,
+          'bookTitle': bookTitle,
+        }),
+      );
 
-    if (response.statusCode == 200) {
-      final responseData = json.decode(response.body);
-      int roomId = responseData['data']['roomId']; // 서버에서 받은 roomId 사용
+      // UTF-8로 강제 디코딩
+      String decodedResponse = utf8.decode(response.bodyBytes);
+      final responseData = json.decode(decodedResponse);
 
-      print("서버 응답 : $responseData");
-      print("채팅방 생성 성공, roomId: $roomId");
+      if (response.statusCode == 200) {
+        int roomId = responseData['data']['roomId']; // 서버에서 받은 roomId
+        String bookTitle = utf8
+            .decode(utf8.encode(responseData['data']['bookTitle'])); // 한글 깨짐 방지
+        String charactersName =
+            responseData['data']['charactersName']; // 서버에서 받은 캐릭터 이름
 
-      // 채팅방 생성 후 roomId를 기반으로 화면 전환
-      Get.toNamed(AppRoutes.CHAT, arguments: {"roomId": roomId});
+        print("서버 응답: $responseData");
+        print(
+            "채팅방 생성 성공, roomId: $roomId, bookTitle: $bookTitle, charactersName: $charactersName");
 
-      // WebSocket 연결 예시 (roomId로 연결)
-      connectToWebSocket(roomId);
-    } else {
-      print("채팅방 생성 실패: ${response.statusCode}");
-      print("서버 응답: ${response.body}");
+        // 채팅방 생성 후 화면 이동
+        Get.toNamed(AppRoutes.CHAT, arguments: {
+          "roomId": roomId,
+          "bookTitle": bookTitle,
+          "charactersName": charactersName,
+        });
+
+        // WebSocket 연결 (필요 시 사용)
+        // connectToWebSocket(roomId);
+
+        return true; // 채팅방 생성 성공 시 true 반환
+      } else {
+        print("채팅방 생성 실패: ${response.statusCode}");
+        print("서버 응답: $decodedResponse");
+        return false; // 실패 시 false 반환
+      }
+    } catch (e) {
+      print("채팅방 생성 중 오류 발생: $e");
+      return false; // 예외 발생 시 false 반환
     }
   }
 
-  // WebSocket 연결 함수
-  void connectToWebSocket(int roomId) {
-    // WebSocket 연결 URL은 roomId를 사용하여 연결
-    final channel = WebSocketChannel.connect(
-      Uri.parse('wss://be.dev.storymate.site/chat/$roomId'),
-    );
+  // // WebSocket 연결 함수
+  // void connectToWebSocket(int roomId) {
+  //   // WebSocket 연결 URL은 roomId를 사용하여 연결
+  //   final channel = WebSocketChannel.connect(
+  //     Uri.parse('wss://be.dev.storymate.site/chat/$roomId'),
+  //   );
 
-    // WebSocket 수신 처리
-    channel.stream.listen((message) {
-      print('Received message: $message');
-      // 추가적인 메시지 처리 로직
-    });
-  }
+  //   // WebSocket 수신 처리
+  //   channel.stream.listen((message) {
+  //     print('Received message: $message');
+  //     // 추가적인 메시지 처리 로직
+  //   });
+  // }
 }

@@ -467,6 +467,14 @@ class _ChatScreenState extends State<ChatScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
+        leading: GestureDetector(
+          onTap: () => Get.back(),
+          child: Icon(
+            Icons.arrow_back_ios_new,
+          ),
+        ),
+        forceMaterialTransparency: true,
+        automaticallyImplyLeading: false,
         title: Text(
           "대화하기",
           style: TextStyle(
