@@ -47,158 +47,164 @@ class _BookReadPageState extends State<BookReadPage> {
     // 동적으로 책 파일 로드
     controller.loadBook(filePath, screenWidth, screenHeight, textStyle, bookId);
 
-    return Obx(() {
-      return Scaffold(
-        backgroundColor: AppTheme.backgroundColor,
-        appBar: controller.isUIVisible.value
-            ? BookAppBar(
-                title: title,
-                onLeadingTap: () => controller.goBack(bookId),
-                isActionVisible: true,
-                onBookmarkTap: () {
-                  controller.toggleBookmark(bookId);
-                }, // 북마크 탭 클릭 로직 필요
-                bookmarkActive: controller.bookmarks
-                    .contains(controller.currentPage.value + 1),
-                onMoreTap: () =>
-                    controller.toMorePage(title, bookId), // 더보기 탭 클릭 로직 필요
-              )
-            : AppBar(
-                forceMaterialTransparency: true,
-                toolbarHeight: 57.h,
-              ),
-        bottomNavigationBar: controller.isUIVisible.value
-            ? Container(
-                width: MediaQuery.of(context).size.width,
-                height: 79.h,
-                decoration: ShapeDecoration(
-                  color: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    side: BorderSide(
-                      width: 0.50.w,
-                      strokeAlign: BorderSide.strokeAlignOutside,
-                      color: Color(0xFFA2A2A2),
+    return PopScope(
+      canPop: false, // 뒤로 가기 방지
+      onPopInvoked: (didPop) {
+        if (didPop) return; // 뒤로 가기 요청 무시
+      },
+      child: Obx(() {
+        return Scaffold(
+          backgroundColor: AppTheme.backgroundColor,
+          appBar: controller.isUIVisible.value
+              ? BookAppBar(
+                  title: title,
+                  onLeadingTap: () => controller.goBack(bookId),
+                  isActionVisible: true,
+                  onBookmarkTap: () {
+                    controller.toggleBookmark(bookId);
+                  }, // 북마크 탭 클릭 로직 필요
+                  bookmarkActive: controller.bookmarks
+                      .contains(controller.currentPage.value + 1),
+                  onMoreTap: () =>
+                      controller.toMorePage(title, bookId), // 더보기 탭 클릭 로직 필요
+                )
+              : AppBar(
+                  forceMaterialTransparency: true,
+                  toolbarHeight: 57.h,
+                ),
+          bottomNavigationBar: controller.isUIVisible.value
+              ? Container(
+                  width: MediaQuery.of(context).size.width,
+                  height: 79.h,
+                  decoration: ShapeDecoration(
+                    color: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      side: BorderSide(
+                        width: 0.50.w,
+                        strokeAlign: BorderSide.strokeAlignOutside,
+                        color: Color(0xFFA2A2A2),
+                      ),
                     ),
                   ),
-                ),
-                child: Padding(
-                  padding:
-                      EdgeInsets.only(left: 25.w, bottom: 20.h, right: 25.w),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      // 리셋 버튼
-                      GestureDetector(
-                        onTap: () async {
-                          bool? result = await showDialog<bool>(
-                            context: context,
-                            builder: (context) =>
-                                CustomAlertDialog(question: '처음부터 다시 읽으시겠습니까?'),
-                          );
-                          if (result == true) {
-                            controller.resetToFirstPage(); // 첫 페이지로 이동
-                          }
-                        },
-                        child: Icon(Icons.undo),
-                      ),
-                      // 페이지 정보와 프로그레스 바
-                      Obx(
-                        () => SizedBox(
-                          width: 258.w,
-                          child: Slider(
-                            value: controller.pages.isEmpty
-                                ? 0
-                                : controller.currentPage.value.toDouble(),
-                            min: 0,
-                            max: (controller.pages.isEmpty
-                                    ? 1
-                                    : controller.pages.length - 1)
-                                .toDouble(),
-                            divisions: controller.pages.isEmpty
-                                ? null
-                                : controller.pages.length - 1,
-                            activeColor: AppTheme.primaryColor,
-                            inactiveColor: Colors.grey.withOpacity(
-                                controller.pages.isEmpty ? 0.3 : 1.0),
-                            onChanged: controller.pages.isEmpty
-                                ? null
-                                : (double value) {
-                                    controller.currentPage.value =
-                                        value.toInt();
-                                    controller.updateProgress();
-                                  },
-                            label: controller.pages.isEmpty
-                                ? ''
-                                : '${controller.currentPage.value + 1}',
+                  child: Padding(
+                    padding:
+                        EdgeInsets.only(left: 25.w, bottom: 20.h, right: 25.w),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        // 리셋 버튼
+                        GestureDetector(
+                          onTap: () async {
+                            bool? result = await showDialog<bool>(
+                              context: context,
+                              builder: (context) => CustomAlertDialog(
+                                  question: '처음부터 다시 읽으시겠습니까?'),
+                            );
+                            if (result == true) {
+                              controller.resetToFirstPage(); // 첫 페이지로 이동
+                            }
+                          },
+                          child: Icon(Icons.undo),
+                        ),
+                        // 페이지 정보와 프로그레스 바
+                        Obx(
+                          () => SizedBox(
+                            width: 258.w,
+                            child: Slider(
+                              value: controller.pages.isEmpty
+                                  ? 0
+                                  : controller.currentPage.value.toDouble(),
+                              min: 0,
+                              max: (controller.pages.isEmpty
+                                      ? 1
+                                      : controller.pages.length - 1)
+                                  .toDouble(),
+                              divisions: controller.pages.isEmpty
+                                  ? null
+                                  : controller.pages.length - 1,
+                              activeColor: AppTheme.primaryColor,
+                              inactiveColor: Colors.grey.withOpacity(
+                                  controller.pages.isEmpty ? 0.3 : 1.0),
+                              onChanged: controller.pages.isEmpty
+                                  ? null
+                                  : (double value) {
+                                      controller.currentPage.value =
+                                          value.toInt();
+                                      controller.updateProgress();
+                                    },
+                              label: controller.pages.isEmpty
+                                  ? ''
+                                  : '${controller.currentPage.value + 1}',
+                            ),
                           ),
                         ),
-                      ),
-                      Obx(
-                        () => Text(
-                          '${controller.currentPage.value + 1}/${controller.pages.length}',
-                          style: TextStyle(
-                            color: Colors.black,
-                            fontSize: 13.sp,
-                            fontFamily: 'Nanum',
-                            fontWeight: FontWeight.w400,
-                            height: 1.33.h,
-                            letterSpacing: -0.23.w,
+                        Obx(
+                          () => Text(
+                            '${controller.currentPage.value + 1}/${controller.pages.length}',
+                            style: TextStyle(
+                              color: Colors.black,
+                              fontSize: 13.sp,
+                              fontFamily: 'Nanum',
+                              fontWeight: FontWeight.w400,
+                              height: 1.33.h,
+                              letterSpacing: -0.23.w,
+                            ),
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-              )
-            : null,
-        floatingActionButton: FloatingActionButton(
-          onPressed: _showHighlightGuide,
-          backgroundColor: AppTheme.primaryColor,
-          child: Icon(Icons.help_outline, color: Colors.white),
-        ),
-        body: GestureDetector(
-          onTap: controller.toggleUIVisibility,
-          onHorizontalDragEnd: (details) {
-            if (details.primaryVelocity! < 0) {
-              // 오른쪽 -> 왼쪽 스와이프 (다음 페이지)
-              controller.goToNextPage(bookId);
-            } else if (details.primaryVelocity! > 0) {
-              // 왼쪽 -> 오른쪽 스와이프 (이전 페이지)
-              controller.goToPreviousPage(bookId);
-            }
-          },
-          child: Obx(() {
-            if (controller.pages.isEmpty) {
-              return const Center(child: CircularProgressIndicator());
-            } else {
-              return Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: SelectableText.rich(
-                  _buildHighlightedText(bookId),
-                  onSelectionChanged: (TextSelection selection, cause) {
-                    if (selection.start != selection.end) {
-                      setState(() {
-                        startSelection = selection.start;
-                        endSelection = selection.end;
-                        isSelecting = true; // 드래그 시작
-                      });
-                    }
-                  },
-                  onTap: () {
-                    if (isSelecting &&
-                        startSelection != null &&
-                        endSelection != null) {
-                      _addHighlight(bookId);
-                    }
-                  },
-                  style: textStyle,
-                ),
-              );
-            }
-          }),
-        ),
-      );
-    });
+                )
+              : null,
+          floatingActionButton: FloatingActionButton(
+            onPressed: _showHighlightGuide,
+            backgroundColor: AppTheme.primaryColor,
+            child: Icon(Icons.help_outline, color: Colors.white),
+          ),
+          body: GestureDetector(
+            onTap: controller.toggleUIVisibility,
+            onHorizontalDragEnd: (details) {
+              if (details.primaryVelocity! < 0) {
+                // 오른쪽 -> 왼쪽 스와이프 (다음 페이지)
+                controller.goToNextPage(bookId);
+              } else if (details.primaryVelocity! > 0) {
+                // 왼쪽 -> 오른쪽 스와이프 (이전 페이지)
+                controller.goToPreviousPage(bookId);
+              }
+            },
+            child: Obx(() {
+              if (controller.pages.isEmpty) {
+                return const Center(child: CircularProgressIndicator());
+              } else {
+                return Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: SelectableText.rich(
+                    _buildHighlightedText(bookId),
+                    onSelectionChanged: (TextSelection selection, cause) {
+                      if (selection.start != selection.end) {
+                        setState(() {
+                          startSelection = selection.start;
+                          endSelection = selection.end;
+                          isSelecting = true; // 드래그 시작
+                        });
+                      }
+                    },
+                    onTap: () {
+                      if (isSelecting &&
+                          startSelection != null &&
+                          endSelection != null) {
+                        _addHighlight(bookId);
+                      }
+                    },
+                    style: textStyle,
+                  ),
+                );
+              }
+            }),
+          ),
+        );
+      }),
+    );
   }
 
   /// 선택된 부분을 즉시 하이라이트 처리하는 `TextSpan` 생성

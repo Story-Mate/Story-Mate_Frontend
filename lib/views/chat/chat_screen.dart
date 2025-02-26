@@ -7,9 +7,12 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:storymate/components/theme.dart';
 import 'package:storymate/models/message.dart';
+import 'package:storymate/services/api_service.dart';
 import 'package:storymate/view_models/chat/chat_controller.dart';
+import 'package:storymate/views/chat/character_selection_screen.dart';
 import 'package:storymate/views/chat/chat_bubble.dart';
 import 'package:storymate/views/chat/quiz_screen.dart';
+import 'package:storymate/views/mypage/my_page.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 class ChatScreen extends StatefulWidget {
@@ -29,6 +32,9 @@ class ChatScreen extends StatefulWidget {
 }
 
 class _ChatScreenState extends State<ChatScreen> {
+  final ApiService apiService = ApiService();
+  var messageCount = 0.obs;
+
   WebSocketChannel? channel;
   DateTime lastMessageReceived = DateTime.now();
   final ChatController controller = Get.put(ChatController());
@@ -40,7 +46,7 @@ class _ChatScreenState extends State<ChatScreen> {
   int answerCount = 0;
   bool isQuizButtonEnabled = false;
   bool hasQuizNotificationShown = false;
-  bool isSendingMessage = false;
+  var isSendingMessage = false.obs;
 
   @override
   void initState() {
@@ -62,6 +68,84 @@ class _ChatScreenState extends State<ChatScreen> {
       connectWebSocket();
       fetchChatMessages();
     }
+
+    fetchUserInfo();
+  }
+
+  /// 회원 정보 조회 API 호출 (잔여 메시지 동기화)
+  Future<void> fetchUserInfo() async {
+    try {
+      final userData = await apiService.fetchUserInfo();
+      if (userData != null) {
+        setState(() {
+          messageCount.value = userData["messageCount"] ?? 0;
+        });
+        print("회원 정보 조회 성공: 메시지 개수 = ${messageCount.value}");
+      } else {
+        print("회원 정보 조회 실패");
+      }
+    } catch (e) {
+      print("회원 정보 조회 중 오류 발생: $e");
+    }
+  }
+
+  /// 메시지가 부족할 경우 안내창 표시
+  Future<void> _showNoMessageAlert() async {
+    await Get.dialog(
+      Dialog(
+        backgroundColor: AppTheme.backgroundColor,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              Text(
+                "메시지 부족",
+                style: TextStyle(
+                  fontFamily: 'Jua',
+                  fontSize: 20.sp,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              SizedBox(height: 10.h),
+              Text(
+                "잔여 메시지가 부족하여 채팅을 보낼 수 없습니다.\n충전 후 이용해주세요.",
+                style: TextStyle(
+                  fontFamily: 'Jua',
+                  fontSize: 18,
+                  color: Colors.black87,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              SizedBox(height: 20.h),
+              ElevatedButton(
+                onPressed: () {
+                  Get.back();
+                  Get.off(MyPage()); // 마이페이지로 이동
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primaryColor,
+                ),
+                child: Text(
+                  "충전하러 가기",
+                  style: TextStyle(
+                    fontFamily: 'Jua',
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   Future<void> _initializeChatRoom() async {
@@ -95,7 +179,7 @@ class _ChatScreenState extends State<ChatScreen> {
         'isUser': false,
       });
       answerCount++;
-      isSendingMessage = false;
+      isSendingMessage.value = false;
     });
     if (answerCount >= 3 && !isQuizButtonEnabled) {
       setState(() {
@@ -211,7 +295,7 @@ class _ChatScreenState extends State<ChatScreen> {
             'isUser': false,
           });
           answerCount++;
-          isSendingMessage = false;
+          isSendingMessage.value = false;
         });
         if (answerCount >= 3 && !isQuizButtonEnabled) {
           setState(() {
@@ -411,16 +495,23 @@ class _ChatScreenState extends State<ChatScreen> {
     await enterChatRoom(characterId, title, bookTitle, title);
   }
 
-  void sendMessage(String message) {
+  Future<void> sendMessage(String message) async {
     if (message.isEmpty) return;
-    setState(() => isSendingMessage = true);
+
+    // 메시지 부족 시 차단
+    if (messageCount.value == 0) {
+      _showNoMessageAlert();
+      return;
+    }
+
+    setState(() => isSendingMessage.value = true);
     if (chatMessages
         .any((msg) => msg['content'] == message && msg['isUser'] == true)) {
       print("중복 메시지 전송 시도 방지");
       return;
     }
     setState(() {
-      isSendingMessage = true;
+      isSendingMessage.value = true;
     });
     String sender = "testUser";
     try {
@@ -432,6 +523,8 @@ class _ChatScreenState extends State<ChatScreen> {
           'isUser': true,
         });
       });
+
+      await fetchUserInfo();
       print("메시지 전송 완료: $message");
     } catch (e) {
       print("메시지 전송 실패: $e");
@@ -613,122 +706,150 @@ class _ChatScreenState extends State<ChatScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        title: Text(
-          "${widget.charactersName} 대화하기 ", // 캐릭터 이름 표시
-          style: TextStyle(
-            fontSize: 20.sp,
-            color: Colors.black,
-            fontFamily: 'Jua',
-            fontWeight: FontWeight.bold,
+    return PopScope(
+      canPop: false, // 뒤로 가기 방지
+      onPopInvoked: (didPop) {
+        if (didPop) return; // 뒤로 가기 요청 무시
+      },
+      child: Scaffold(
+        backgroundColor: Colors.white,
+        appBar: AppBar(
+          leading: GestureDetector(
+            onTap: () {
+              channel?.sink.close();
+              pingTimer?.cancel();
+              print("웹소켓 연결 종료");
+              Get.off(CharacterSelectionScreen());
+            },
+            child: Icon(
+              Icons.arrow_back_ios_new,
+            ),
           ),
-        ),
-        actions: [
-          Padding(
-            padding: EdgeInsets.only(right: 10),
-            child: SizedBox(
-              height: 40,
-              child: ElevatedButton(
-                onPressed: () {
-                  if (!isQuizButtonEnabled) {
-                    _showQuizLockedDialog();
-                  } else {
-                    channel?.sink.close();
-                    pingTimer?.cancel();
-                    print("퀴즈 시작 -> 웹소켓 연결 종료");
-                    Get.to(() => QuizScreen(), arguments: {
-                      "characterName": charactersName,
-                      "bookTitle": bookTitle,
-                    })!
-                        .then((_) {
-                      reconnectWebSocket();
-                      print("퀴즈 종료 -> 웹소켓 재연결");
-                    });
-                  }
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: isQuizButtonEnabled
-                      ? Colors.purple[400]
-                      : Colors.grey[400],
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(15),
+          title: Text(
+            "${widget.charactersName} 대화하기 ", // 캐릭터 이름 표시
+            style: TextStyle(
+              fontSize: 20.sp,
+              color: Colors.black,
+              fontFamily: 'Jua',
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          actions: [
+            Padding(
+              padding: EdgeInsets.only(right: 10),
+              child: SizedBox(
+                height: 40,
+                child: ElevatedButton(
+                  onPressed: () {
+                    if (!isQuizButtonEnabled) {
+                      _showQuizLockedDialog();
+                    } else {
+                      channel?.sink.close();
+                      pingTimer?.cancel();
+                      print("퀴즈 시작 -> 웹소켓 연결 종료");
+                      Get.to(() => QuizScreen(), arguments: {
+                        "characterName": charactersName,
+                        "bookTitle": bookTitle,
+                      })!
+                          .then((_) {
+                        reconnectWebSocket();
+                        print("퀴즈 종료 -> 웹소켓 재연결");
+                      });
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: isQuizButtonEnabled
+                        ? Colors.purple[400]
+                        : Colors.grey[400],
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(15),
+                    ),
+                    padding: EdgeInsets.symmetric(horizontal: 15, vertical: 8),
+                    minimumSize: Size(100, 36),
                   ),
-                  padding: EdgeInsets.symmetric(horizontal: 15, vertical: 8),
-                  minimumSize: Size(100, 36),
-                ),
-                child: Text(
-                  "퀴즈 도전하기",
-                  style: TextStyle(
-                    fontFamily: 'Jua',
-                    color: Colors.white,
-                    fontSize: 14.sp,
-                    fontWeight: FontWeight.bold,
+                  child: Text(
+                    "퀴즈 도전하기",
+                    style: TextStyle(
+                      fontFamily: 'Jua',
+                      color: Colors.white,
+                      fontSize: 14.sp,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
-          Expanded(
-            child: ListView.builder(
-              itemCount: chatMessages.length + (isSendingMessage ? 1 : 0),
-              itemBuilder: (context, index) {
-                if (isSendingMessage && index == chatMessages.length) {
-                  return Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: Center(child: CircularProgressIndicator()),
+          ],
+        ),
+        body: Column(
+          children: [
+            Expanded(
+              child: ListView.builder(
+                itemCount:
+                    chatMessages.length + (isSendingMessage.value ? 1 : 0),
+                itemBuilder: (context, index) {
+                  if (isSendingMessage.value && index == chatMessages.length) {
+                    return Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Center(child: CircularProgressIndicator()),
+                    );
+                  }
+                  var message = chatMessages[index];
+                  return ChatBubble(
+                    message: Message(
+                      content: message['content'],
+                      isUser: message['isUser'],
+                    ),
                   );
-                }
-                var message = chatMessages[index];
-                return ChatBubble(
-                  message: Message(
-                    content: message['content'],
-                    isUser: message['isUser'],
-                  ),
-                );
-              },
+                },
+              ),
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: controller.textController,
-                    decoration: InputDecoration(hintText: "메시지를 입력하세요"),
-                    enabled: !isSendingMessage,
-                    maxLines: null, // 여러 줄 입력 가능
-                    keyboardType: TextInputType.multiline, // 엔터 시 줄바꿈
-                    style: TextStyle(
-                        fontSize: 16.sp, fontFamily: 'Jua'), // 글자 크기 및 글씨체 설정
-                    onSubmitted: (value) {
-                      if (!isSendingMessage && value.trim().isNotEmpty) {
-                        sendMessage(value);
-                      }
-                    },
+            Padding(
+              padding: EdgeInsets.only(
+                  bottom: 30.h, left: 10.w, right: 10.w, top: 10.h),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Obx(() => TextField(
+                          controller: controller.textController,
+                          decoration: InputDecoration(
+                            hintText: messageCount.value > 0
+                                ? "메시지를 입력하세요"
+                                : "메시지를 보낼 수 없습니다",
+                          ),
+                          enabled: messageCount.value > 0,
+                          maxLines: null,
+                          keyboardType: TextInputType.multiline,
+                          style: TextStyle(fontSize: 16.sp, fontFamily: 'Jua'),
+                          onSubmitted: (value) {
+                            if (!isSendingMessage.value &&
+                                value.trim().isNotEmpty &&
+                                messageCount.value > 0) {
+                              sendMessage(value);
+                            }
+                          },
+                        )),
                   ),
-                ),
-                IconButton(
-                  icon: Icon(Icons.send),
-                  onPressed: isSendingMessage
-                      ? null
-                      : () {
-                          String message = controller.textController.text;
-                          if (message.isNotEmpty) {
-                            sendMessage(message);
-                          }
-                        },
-                ),
-              ],
+                  Obx(() => IconButton(
+                        icon: Icon(Icons.send),
+                        color: messageCount.value > 0
+                            ? AppTheme.primaryColor
+                            : Colors.grey,
+                        onPressed: messageCount.value > 0 &&
+                                !isSendingMessage.value
+                            ? () {
+                                String message = controller.textController.text;
+                                if (message.isNotEmpty) {
+                                  sendMessage(message);
+                                }
+                              }
+                            : null,
+                      )),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

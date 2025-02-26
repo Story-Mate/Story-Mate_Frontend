@@ -14,17 +14,6 @@ class QuizScreen extends StatefulWidget {
 class _QuizScreenState extends State<QuizScreen> {
   final QuizController controller = Get.put(QuizController());
 
-  /// 아코디언 열기 시 퀴즈 재도전 API 호출
-  Future<void> _onQuizTileExpanded(
-      bool isExpanded, int index, String quizType) async {
-    if (isExpanded) {
-      if (controller.hasQuizBeenSubmitted(quizType)) {
-        controller.showRetakeAlertDialog();
-        await controller.restartQuiz(quizType);
-      }
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return WillPopScope(
@@ -73,8 +62,6 @@ class _QuizScreenState extends State<QuizScreen> {
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      onExpansionChanged: (isExpanded) =>
-                          _onQuizTileExpanded(isExpanded, index, quizType),
                       children: [
                         Padding(
                           padding: EdgeInsets.all(16.0),

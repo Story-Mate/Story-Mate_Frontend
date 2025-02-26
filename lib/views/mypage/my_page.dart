@@ -52,10 +52,6 @@ class _MyPageState extends State<MyPage> with RouteAware {
         forceMaterialTransparency: true,
         automaticallyImplyLeading: false,
         backgroundColor: AppTheme.backgroundColor,
-        leading: GestureDetector(
-          onTap: () => Get.back(),
-          child: Icon(Icons.arrow_back_ios_new),
-        ),
         centerTitle: true,
         title: Text(
           '마이페이지',

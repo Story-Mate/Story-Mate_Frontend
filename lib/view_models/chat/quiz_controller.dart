@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:storymate/components/theme.dart';
 import 'package:storymate/services/api_service.dart';
+import 'package:storymate/views/mypage/my_page.dart';
 
 class QuizController extends GetxController {
   final ApiService apiService = ApiService();
@@ -14,6 +17,7 @@ class QuizController extends GetxController {
   var isSubmitting = false.obs;
 
   var previousSubmissions = <String, bool>{}.obs;
+  var messageCount = 0.obs;
 
   var isEssaySubmitting = false.obs; // 에세이 제출 로딩 상태
   var essayResponse = ''.obs; // 에세이 응답 메시지
@@ -50,7 +54,84 @@ class QuizController extends GetxController {
     prefs = await SharedPreferences.getInstance();
     Get.put(prefs);
 
+    await fetchUserInfo(); // 사용자 정보 조회
     checkQuizSubmissionStatus();
+  }
+
+  /// 회원 정보 조회 API 호출
+  Future<void> fetchUserInfo() async {
+    try {
+      final userData = await apiService.fetchUserInfo();
+
+      if (userData != null) {
+        messageCount.value = userData["messageCount"] ?? 0;
+
+        print("회원 정보 조회 성공: 메시지 개수=${messageCount.value}");
+      } else {
+        print("회원 정보 조회 실패");
+      }
+    } catch (e) {
+      print("회원 정보 조회 중 오류 발생: $e");
+    }
+  }
+
+  /// 메시지가 부족한 경우 안내창 표시
+  Future<void> showNoMessageAlert() async {
+    await Get.dialog(
+      Dialog(
+        backgroundColor: AppTheme.backgroundColor,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              Text(
+                "메시지 부족",
+                style: TextStyle(
+                  fontFamily: 'Jua',
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              SizedBox(height: 10.h),
+              Text(
+                "잔여 메시지가 부족하여 퀴즈 재도전이 불가합니다.\n충전 후 이용해주세요.",
+                style: TextStyle(
+                  fontFamily: 'Jua',
+                  fontSize: 18,
+                  color: Colors.black87,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              SizedBox(height: 20.h),
+              ElevatedButton(
+                onPressed: () {
+                  Get.back();
+                  Get.off(MyPage()); // 마이페이지로 이동
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primaryColor,
+                ),
+                child: Text(
+                  "충전하러 가기",
+                  style: TextStyle(
+                    fontFamily: 'Jua',
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   /// 사용자의 퀴즈 제출 여부 확인 (각 타입별 저장)
@@ -98,6 +179,11 @@ class QuizController extends GetxController {
 
   /// 특정 타입의 퀴즈 재도전 API 호출 (메시지 1개 차감)
   Future<void> restartQuiz(String quizType) async {
+    if (messageCount.value == 0) {
+      await showNoMessageAlert(); // 메시지가 부족하면 안내창 띄우고 종료
+      return;
+    }
+
     print("퀴즈 재도전 요청: $quizType");
 
     var response =
@@ -121,6 +207,7 @@ class QuizController extends GetxController {
       });
 
       saveQuizSubmission(quizType);
+      await fetchUserInfo();
     } else {
       print("퀴즈 재도전 실패: 서버 응답 없음");
     }
@@ -139,7 +226,9 @@ class QuizController extends GetxController {
   }
 
   /// 퀴즈 재도전 안내 다이얼로그
-  void showRetakeAlertDialog() {
+  Future<bool> showRetakeAlertDialog() async {
+    Completer<bool> completer = Completer<bool>();
+
     Get.dialog(
       Dialog(
         backgroundColor: AppTheme.backgroundColor, // 다이얼로그 배경색
@@ -167,7 +256,7 @@ class QuizController extends GetxController {
 
               // 안내 메시지
               Text(
-                "퀴즈 재도전을 진행하여\n메시지 개수가 1개 차감되었습니다.",
+                "퀴즈 재도전을 진행하여\n메시지 개수가 1개 차감되었습니다.\n\n현재 잔여 메시지: ${messageCount.value}개",
                 style: TextStyle(
                   fontFamily: 'Jua',
                   fontSize: 18,
@@ -180,7 +269,8 @@ class QuizController extends GetxController {
               // 확인 버튼
               ElevatedButton(
                 onPressed: () {
-                  Get.back(); // 다이얼로그 닫기
+                  Get.back();
+                  completer.complete(true);
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppTheme.primaryColor, // 버튼 색상 설정
@@ -199,6 +289,8 @@ class QuizController extends GetxController {
         ),
       ),
     );
+
+    return completer.future;
   }
 
   List<String> parseOptionsFromQuestion(String question) {
@@ -249,13 +341,15 @@ class QuizController extends GetxController {
     }
 
     try {
-      // 이전 제출 여부 확인
+      // 이미 제출한 퀴즈라면, 먼저 퀴즈 재도전 수행 후 안내창 띄우기
       if (previousSubmissions[quizType] == true) {
-        print("이미 제출한 퀴즈 재도전: $quizType");
-        showRetakeAlertDialog();
-        await restartQuiz(quizType);
-        isSubmitting.value = false;
-        return;
+        await restartQuiz(quizType); // 퀴즈 재도전 수행
+        bool confirmed = await showRetakeAlertDialog(); // 확인 버튼 클릭 대기
+
+        if (!confirmed) {
+          isSubmitting.value = false;
+          return; // 사용자가 확인하지 않으면 제출 중단
+        }
       }
 
       // 서버로 답안 제출 (GET 요청 유지)
@@ -263,6 +357,8 @@ class QuizController extends GetxController {
           characterName, bookTitle, quizType, userAnswer);
 
       if (response != null && response["statusCode"] == 200) {
+        await fetchUserInfo();
+
         print("서버 응답 전체 데이터: $response");
 
         String resultMessage =
@@ -273,16 +369,16 @@ class QuizController extends GetxController {
         // 메시지 개수 증가 안내 메시지 추가
         String messageIncrement = "";
         if (quizType == "ox" && correctStatus == "true") {
-          messageIncrement = "메시지 개수가 1개 추가되었습니다!";
+          messageIncrement = "메시지 개수가 3개 추가되었습니다!";
         } else if (quizType == "multiple_choice" && correctStatus == "true") {
-          messageIncrement = "메시지 개수가 2개 추가되었습니다!";
+          messageIncrement = "메시지 개수가 3개 추가되었습니다!";
         } else if (quizType == "essay") {
           if (correctStatus == "O") {
             essayResult = "정답입니다!";
-            messageIncrement = "메시지 개수가 3개 추가되었습니다!";
+            messageIncrement = "메시지 개수가 5개 추가되었습니다!";
           } else if (correctStatus == "C") {
             essayResult = "거의 맞췄어요! 좀 더 생각해보세요.";
-            messageIncrement = "메시지 개수가 1개 추가되었습니다!";
+            messageIncrement = "메시지 개수가 3개 추가되었습니다!";
           } else {
             essayResult = "오답입니다. 다시 생각해보세요.";
           }
@@ -290,7 +386,8 @@ class QuizController extends GetxController {
 
         if (quizType == "essay") {
           // 다이얼로그에 결과 및 메시지 증가 안내 표시
-          showResultDialog(context, "$essayResult\n$messageIncrement");
+          showResultDialog(context,
+              "$essayResult\n$messageIncrement\n잔여 메시지: ${messageCount.value}");
 
           // essayResponse.value = resultMessage;
           essayResponses[index] = resultMessage;
@@ -299,7 +396,8 @@ class QuizController extends GetxController {
           // 제출 후 입력 필드 초기화
           essayControllers[index]?.clear();
         } else {
-          showResultDialog(context, "$resultMessage\n$messageIncrement");
+          showResultDialog(context,
+              "$resultMessage\n$messageIncrement\n잔여 메시지: ${messageCount.value}");
         }
 
         // 해당 퀴즈 타입이 한 번 제출됨을 저장
